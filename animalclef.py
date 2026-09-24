@@ -147,6 +147,7 @@ def evaluate(case, cluster_threshold, attach_threshold):
 def validate(frame, vectors, output, seed):
     random = np.random.default_rng(seed)
     report = {"seed": seed, "model": MODEL, "species": {}}
+    pooled_truth, pooled_prediction = [], []
     for species in SPECIES[:-1]:
         subset = frame[(frame["dataset_key"] == species) & (frame["split"] == "train") & frame["identity"].notna()]
         if subset.empty:
@@ -169,6 +170,7 @@ def validate(frame, vectors, output, seed):
             for attach in np.arange(0.65, 0.951, 0.05)
         )
         best_cluster, best_attach = max(candidates, key=lambda pair: evaluate(cal_case, *pair))
+        best_cluster, best_attach = float(best_cluster), float(best_attach)
         result = {
             "cluster_threshold": best_cluster,
             "attach_threshold": best_attach,
@@ -178,7 +180,13 @@ def validate(frame, vectors, output, seed):
             "holdout_queries": len(hold_case["query"]),
         }
         report["species"][species] = result
+        hold_groups = clusters(hold_case["tree"], len(hold_case["query"]), best_cluster)
+        hold_labels = predict(hold_case["query"], hold_case["reference"],
+                              hold_case["reference_ids"], hold_groups, best_attach)
+        pooled_truth.extend(f"{species}:{label}" for label in hold_case["truth"])
+        pooled_prediction.extend(f"{species}:{label}" for label in hold_labels)
         print(species, result, flush=True)
+    report["pooled_holdout_ari_three_species"] = float(adjusted_rand_score(pooled_truth, pooled_prediction))
     # No labelled Texas horned lizard identities are supplied; transfer a starting threshold.
     report["species"][SPECIES[-1]] = {
         "cluster_threshold": float(np.median([report["species"][name]["cluster_threshold"] for name in SPECIES[:-1]])),

@@ -40,7 +40,7 @@ AnimalCLEF 2026 要求将四种野生动物的测试照片按个体划分，其�
 \subsection{数据与验证协议}
 数据来自 AnimalCLEF 2026 比赛页面\cite{competition}。每个带标签物种的身份随机分为 75\% 参数校准池与 25\% 保留池。各池中约 60\% 至少有两张图片的身份被模拟为已知个体：其中一半图片作为参考，另一半作为查询。其他身份只作为查询，模拟新个体。仅在校准池搜索聚类阈值与关联阈值，再在身份不重合的保留池计算 ARI。实验固定随机种子并记录查询图片数量。
 
-德州角蜥缺乏带标签样本，初始聚类阈值取其他三个物种阈值的中位数。这是一项未经德州角蜥标签验证的迁移假设，不能把其他物种上的 ARI 当作它的性能估计。
+德州角蜥缺乏带标签样本，初始聚类阈值取其他三个物种阈值的中位数。这是一项未经德州角蜥标签验证的迁移假设，不能把其他物种上的 ARI 当作它的性能估计。另报告前三个物种保留查询图片合并后的 ARI，但该指标不包含德州角蜥，不能视为官方比赛成绩。
 
 \subsection{迭代准则}
 首先报告基线在各物种保留池的 ARI、簇数和运行时间。随后分别评估动物裁剪或分割、局部匹配重排、相似度融合，以及必要时的微调。每次只改变一个主要组件，并以保留池 ARI 和错误合并、错误拆分案例共同判断是否保留。公开获胜方案表明全局与局部相似度融合及图聚类具有潜力\cite{winner}，但本文将其作为待验证方向，而不直接采用其他队伍的比赛分数作为自身结果。
@@ -52,8 +52,8 @@ AnimalCLEF 2026 要求将四种野生动物的测试照片按个体划分，其�
 代码、依赖、随机种子、阈值及实验记录保存在公开仓库\url{https://github.com/Fangwenky/animalclef-2026-reid}。比赛图像和标签不会上传。验证集通过已标注训练数据构造，其个体比例及拍摄分布未必等同隐藏测试集；特别是德州角蜥没有直接的本地标签验证。实际 Kaggle 成绩应单独报告，不与本地保留池 ARI 混同。
 
 \begin{thebibliography}{9}
-\bibitem{competition} Adam, L. et al. AnimalCLEF26 @ CVPR \& CLEF. Kaggle, 2026. \url{https://www.kaggle.com/competitions/animal-clef-2026}.
-\bibitem{wildlifedatasets} \v{C}erm\'ak, V. et al. WildlifeDatasets: An Open-Source Toolkit for Animal Re-Identification. WACV, 2024. \url{https://openaccess.thecvf.com/content/WACV2024/papers/Cermak_WildlifeDatasets_An_Open-Source_Toolkit_for_Animal_Re-Identification_WACV_2024_paper.pdf}.
-\bibitem{winner} ElBassat, M. et al. Calibrated Similarity and Graph Clustering for Open-Set Animal Re-Identification. arXiv:2608.02469, 2026. \url{https://arxiv.org/abs/2608.02469}.
+\bibitem{competition} Adam, L. et al. AnimalCLEF26 @ CVPR \& CLEF. Kaggle, 2026. \href{https://www.kaggle.com/competitions/animal-clef-2026}{比赛页面}.
+\bibitem{wildlifedatasets} \v{C}erm\'ak, V. et al. WildlifeDatasets: An Open-Source Toolkit for Animal Re-Identification. WACV, 2024. \href{https://openaccess.thecvf.com/content/WACV2024/papers/Cermak_WildlifeDatasets_An_Open-Source_Toolkit_for_Animal_Re-Identification_WACV_2024_paper.pdf}{论文}.
+\bibitem{winner} ElBassat, M. et al. Calibrated Similarity and Graph Clustering for Open-Set Animal Re-Identification. arXiv:2608.02469, 2026. \href{https://arxiv.org/abs/2608.02469}{论文}.
 \end{thebibliography}
 \end{document}
