@@ -65,7 +65,8 @@ def features(root, frame, output, batch_size):
             vectors.append(output_tensor.cpu().numpy().astype(np.float32))
             print(f"Embedded {min(start + batch_size, len(frame))}/{len(frame)}", flush=True)
     output.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(output, image_id=frame["image_id"].to_numpy(), embeddings=np.concatenate(vectors), model=MODEL)
+    np.savez_compressed(output, image_id=np.asarray(frame["image_id"].tolist(), dtype=str),
+                        embeddings=np.concatenate(vectors), model=MODEL)
     print(f"Saved {output}")
 
 

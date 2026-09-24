@@ -1,0 +1,59 @@
+\documentclass[UTF8,a4paper,11pt]{ctexart}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{amsmath,amssymb,booktabs,hyperref}
+\hypersetup{colorlinks=true,linkcolor=black,urlcolor=blue}
+\title{基于全局视觉特征与身份关联的开放集动物个体发现}
+\author{AnimalCLEF 2026 实验报告}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+AnimalCLEF 2026 要求将四种野生动物的测试照片按个体划分，其中猞猁、蝾螈和红海龟同时包含训练集中已知与未知的个体，而德州角蜥没有带身份标签的训练图片。本文设计一个可复现的基线系统：使用预训练 MegaDescriptor 提取图像特征，对测试图片进行层次聚类，并依据带标签的参考图像将高置信度测试簇关联到已知身份。验证协议以个体为单位分离参数校准集与保留集，在两者内部构造已知和未知个体，以避免按图片随机划分造成的乐观估计。最终实验结果将在获取比赛数据并完成运行后由程序记录填入；当前文稿只陈述方法，不报告未经测量的性能。
+\end{abstract}
+
+\section{问题定义}
+给定带个体身份标签的参考图片集合 $R$ 与无标签测试集合 $Q$，目标是为每张测试图片 $x_i\in Q$ 赋予簇标签 $\hat y_i$。若两张图片展示同一个体，其簇标签应相同；不同个体应分属不同簇。对于前三种动物，测试个体可能在参考集合中出现，也可能完全未知；德州角蜥仅需在测试集合内部发现个体。比赛使用调整兰德指数（Adjusted Rand Index, ARI）比较预测划分与真实划分，错误合并和错误拆分都会影响结果\cite{competition}。
+
+\section{方法}
+\subsection{全局特征与相似度}
+本文使用公开的 MegaDescriptor-T-224 模型\cite{wildlifedatasets}，对输入图片提取特征 $f(x)$，并进行 $\ell_2$ 归一化：
+\begin{equation}
+ z_i=\frac{f(x_i)}{\lVert f(x_i)\rVert_2},\qquad
+ s(i,j)=\frac{z_i^\top z_j+1}{2}.
+\end{equation}
+所有计算按物种独立进行，不允许跨物种聚类。第一版直接使用原图，以便测量全局特征的基础能力。动物分割、局部关键点匹配及特征融合属于后续消融实验，而非基线的隐含前提。
+
+\subsection{测试图片聚类}
+对同一物种的测试图片计算余弦距离 $d(i,j)=1-z_i^\top z_j$，使用平均连接层次聚类构造树。通过物种阈值 $\tau_c$ 切树，得到初始测试簇。该步骤不预设个体数量，允许单图片簇。
+
+\subsection{已知身份关联}
+对测试簇 $C$ 与参考身份 $k$，定义
+\begin{equation}
+ a(C,k)=\underset{i\in C}{\operatorname{median}}
+ \left(\max_{r\in R_k}s(i,r)\right).
+\end{equation}
+若最高分达到绝对阈值 $\tau_a$，且比第二高分至少高 $0.03$，则将测试簇关联到该已知身份；否则视作新个体簇。德州角蜥没有参考身份，因此跳过此步骤。这里的关联只用于让同一已知个体的多个测试簇合并，提交文件仍只包含测试图片的簇标签。
+
+\section{实验设计}
+\subsection{数据与验证协议}
+数据来自 AnimalCLEF 2026 比赛页面\cite{competition}。每个带标签物种的身份随机分为 75\% 参数校准池与 25\% 保留池。各池中约 60\% 至少有两张图片的身份被模拟为已知个体：其中一半图片作为参考，另一半作为查询。其他身份只作为查询，模拟新个体。仅在校准池搜索聚类阈值与关联阈值，再在身份不重合的保留池计算 ARI。实验固定随机种子并记录查询图片数量。
+
+德州角蜥缺乏带标签样本，初始聚类阈值取其他三个物种阈值的中位数。这是一项未经德州角蜥标签验证的迁移假设，不能把其他物种上的 ARI 当作它的性能估计。
+
+\subsection{迭代准则}
+首先报告基线在各物种保留池的 ARI、簇数和运行时间。随后分别评估动物裁剪或分割、局部匹配重排、相似度融合，以及必要时的微调。每次只改变一个主要组件，并以保留池 ARI 和错误合并、错误拆分案例共同判断是否保留。公开获胜方案表明全局与局部相似度融合及图聚类具有潜力\cite{winner}，但本文将其作为待验证方向，而不直接采用其他队伍的比赛分数作为自身结果。
+
+\section{结果与讨论}
+\IfFileExists{results.tex}{\input{results.tex}}{\noindent\textbf{实验尚未完成。}尚未取得受比赛规则保护的数据，因此此处不填写 ARI 或排行榜成绩。}
+
+\section{可复现性与限制}
+代码、依赖、随机种子、阈值及实验记录保存在公开仓库\url{https://github.com/Fangwenky/animalclef-2026-reid}。比赛图像和标签不会上传。验证集通过已标注训练数据构造，其个体比例及拍摄分布未必等同隐藏测试集；特别是德州角蜥没有直接的本地标签验证。实际 Kaggle 成绩应单独报告，不与本地保留池 ARI 混同。
+
+\begin{thebibliography}{9}
+\bibitem{competition} Adam, L. et al. AnimalCLEF26 @ CVPR \& CLEF. Kaggle, 2026. \url{https://www.kaggle.com/competitions/animal-clef-2026}.
+\bibitem{wildlifedatasets} \v{C}erm\'ak, V. et al. WildlifeDatasets: An Open-Source Toolkit for Animal Re-Identification. WACV, 2024. \url{https://openaccess.thecvf.com/content/WACV2024/papers/Cermak_WildlifeDatasets_An_Open-Source_Toolkit_for_Animal_Re-Identification_WACV_2024_paper.pdf}.
+\bibitem{winner} ElBassat, M. et al. Calibrated Similarity and Graph Clustering for Open-Set Animal Re-Identification. arXiv:2608.02469, 2026. \url{https://arxiv.org/abs/2608.02469}.
+\end{thebibliography}
+\end{document}
