@@ -9,7 +9,7 @@ Reproducible baseline for the [AnimalCLEF 2026 Kaggle competition](https://www.k
 3. For species with references, attach a test cluster to a known identity only when its median best-reference score passes both an absolute threshold and a margin over the runner-up. Otherwise it remains a novel cluster.
 4. Convert identity groups to the required `cluster_<dataset>_<number>` submission labels. Cluster numbers are arbitrary; only the grouping matters for ARI.
 
-The baseline deliberately uses one global descriptor. Segmentation, local keypoint matching, fusion, and fine-tuning should be added only after a measured validation gain. The published [AnimalCLEF26 winning solution](https://github.com/MIA-AI-Team/AnimalCLEF26) supports those as promising next experiments, but its reported scores are not results of this repository.
+The baseline deliberately uses one global descriptor. A second run can switch to [MiewID-msv3](https://huggingface.co/conservationxlabs/miewid-msv3) with `--model miewid`; its official model card specifies 440×440 inputs. Segmentation, local keypoint matching, fusion, and fine-tuning should be added only after a measured validation gain. The published [AnimalCLEF26 winning solution](https://github.com/MIA-AI-Team/AnimalCLEF26) supports those as promising next experiments, but its reported scores are not results of this repository.
 
 ## Setup
 
@@ -28,6 +28,8 @@ Download the competition data after accepting its rules on Kaggle. Put `metadata
 .venv/bin/python animalclef.py submit --data data --features features.npz --config results/baseline.json --output submission.csv
 ```
 
+For the MiewID comparison, add `--model miewid` to each command and use separate feature, config, and submission filenames.
+
 Use `--batch-size 4` if feature extraction runs out of GPU memory. A CPU fallback is available, but feature extraction will take longer. The model checkpoint is downloaded from Hugging Face on the first run.
 
 ## Validation protocol
@@ -41,10 +43,11 @@ For each of the three labelled species, identities are divided into calibration 
 | Run | Change | Decision rule |
 | --- | --- | --- |
 | B0 | MegaDescriptor, average linkage, known attachment | Establish valid submission and local ARI |
-| B1 | Animal crop/segmentation | Keep only if held-out ARI improves |
-| B2 | Local feature reranking of global top-k pairs | Keep only if held-out ARI improves |
-| B3 | Fused similarities and species-specific graph clustering | Keep only if held-out ARI improves |
-| B4 | Species-aware fine-tuning | Attempt only if earlier errors justify compute |
+| B1 | Switch global descriptor to MiewID-msv3 | Keep only if held-out ARI or leaderboard improves |
+| B2 | Animal crop/segmentation | Keep only if held-out ARI improves |
+| B3 | Local feature reranking of global top-k pairs | Keep only if held-out ARI improves |
+| B4 | Fused similarities and species-specific graph clustering | Keep only if held-out ARI improves |
+| B5 | Species-aware fine-tuning | Attempt only if earlier errors justify compute |
 
 For every run, record code commit, configuration, per-species calibration and held-out ARI, cluster count, runtime, and a short error analysis. The paper in `paper/` must be updated from actual run artifacts; no benchmark number is assumed here.
 
