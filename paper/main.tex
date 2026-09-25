@@ -1,16 +1,16 @@
-\documentclass[UTF8,a4paper,11pt]{ctexart}
-\usepackage[margin=2.4cm]{geometry}
+\documentclass[UTF8,a4paper,10pt]{ctexart}
+\usepackage[margin=2.1cm]{geometry}
 \usepackage{amsmath,amssymb,booktabs,hyperref}
 \hypersetup{colorlinks=true,linkcolor=black,urlcolor=blue}
-\title{基于全局视觉特征与身份关联的开放集动物个体发现}
-\author{AnimalCLEF 2026 实验报告}
-\date{\today}
+\title{面向 AnimalCLEF 2026 的开放集动物个体发现：\\全局表征融合与局部斑纹匹配}
+\author{Fangwenky}
+\date{2026 年 9 月}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-AnimalCLEF 2026 要求将四种野生动物的测试照片按个体划分，其中猞猁、蝾螈和蠵龟存在训练集中已知与未知的个体，而德州角蜥没有带身份标签的训练图片。本文构建一个可复现的基线系统：使用预训练 MegaDescriptor 提取图像特征，对测试图片进行层次聚类，并依据带标签的参考图像将高置信度测试簇关联到已知身份。验证协议以个体为单位分离参数校准集与保留集，在两者内部构造已知和未知个体，以避免按图片随机划分造成的乐观估计。三个随机划分中的蝾螈保留集 ARI 均低于 0.11；基线在 Kaggle 隐藏测试集上的 private ARI 为 0.18564，说明单一全局特征仍难以可靠地发现个体。本文继续比较 MiewID 及后续局部匹配方法。
+AnimalCLEF 2026 要求将四种动物的测试照片按个体分簇；前三种动物有带身份标签的训练图像，德州角蜥则只有测试图像。本文比较 MegaDescriptor、MiewID、双模型特征融合、SIFT 局部匹配以及互近邻图聚类。以身份互斥的三种随机划分验证，双模型融合加蝾螈局部匹配使蝾螈保留集调整兰德指数（ARI）由基线的 $0.097\pm0.010$ 提高到 $0.222\pm0.023$；蠵龟由 $0.496\pm0.156$ 提高到 $0.835\pm0.050$。针对无标签角蜥，检查候选对的局部匹配稀疏性后采用更保守的聚类阈值。最终 Kaggle 提交的 public/private ARI 为 $0.30642/0.39072$，相较 MegaDescriptor 基线的 $0.13528/0.18564$ 明显提高。角蜥阈值经过排行榜比较，故该成绩不能作为独立泛化估计。
 \end{abstract}
 
 \section{问题定义}
@@ -18,15 +18,22 @@ AnimalCLEF 2026 要求将四种野生动物的测试照片按个体划分，其�
 
 \section{方法}
 \subsection{全局特征与相似度}
-本文使用公开的 MegaDescriptor-T-224 模型\cite{wildlifedatasets}，对输入图片提取特征 $f(x)$，并进行 $\ell_2$ 归一化：
+本文分别使用预训练 MegaDescriptor-T-224\cite{mega} 和 MiewID-msv3\cite{miewid}，对输出进行 $\ell_2$ 归一化。MegaDescriptor 使用默认预处理，MiewID 使用 $440\times440$ 像素输入。令两个单位向量为 $z_i^M,z_i^W$，等权融合为
 \begin{equation}
- z_i=\frac{f(x_i)}{\lVert f(x_i)\rVert_2},\qquad
- s(i,j)=\frac{z_i^\top z_j+1}{2}.
+ z_i=[\sqrt{0.5}z_i^M,\sqrt{0.5}z_i^W],\qquad
+ s_g(i,j)=\frac{z_i^\top z_j+1}{2}.
 \end{equation}
-所有计算按物种独立进行，不允许跨物种聚类。第一版直接使用原图，以便测量全局特征的基础能力。动物分割、局部关键点匹配及特征融合属于后续消融实验，而非基线的隐含前提。
+所有计算按物种独立进行。本文直接使用比赛图像，不额外训练或分割动物。
+
+\subsection{局部斑纹证据}
+蝾螈具有细小、方向多变的斑纹，全局表征容易把同一个体拆开。对每张图像将最长边缩放到不超过 $600$ 像素，最多提取 $1000$ 个 SIFT 关键点。只对融合特征前 $30$ 个近邻候选对进行匹配，按 Lowe 比值 $0.75$ 计数 $m_{ij}$\cite{sift}。局部证据对全局相似度的修正为
+\begin{equation}
+ s(i,j)=\min\left\{1,\ s_g(i,j)+0.12\,\mathrm{clip}\!\left(\frac{m_{ij}-25}{55},0,1\right)\right\}.
+\end{equation}
+未列为候选的图像对保持 $s_g$。蝾螈查询之间和查询到参考的匹配都使用修正；角蜥测试图像也计算 SIFT 候选对。猞猁的探索性候选对实验中，SIFT 配对 AUC 低于全局特征，故最终不对猞猁加局部修正。蠵龟使用纯融合特征。
 
 \subsection{测试图片聚类}
-对同一物种的测试图片计算余弦距离 $d(i,j)=1-z_i^\top z_j$，使用平均连接层次聚类构造树。通过物种阈值 $\tau_c$ 切树，得到初始测试簇。该步骤不预设个体数量，允许单图片簇。
+对同一物种的测试图片计算距离 $d(i,j)=2[1-s(i,j)]$，使用平均连接层次聚类构造树。通过物种阈值 $\tau_c$ 切树，得到初始测试簇，不预设个体数量。另测试互近邻图方法：每张图像保留 $k=10$ 个最近邻，仅当双向近邻且相似度达到阈值时连边，再取连通分量。图方法作为消融实验，不用于最终 private ARI 最优的提交。
 
 \subsection{已知身份关联}
 对测试簇 $C$ 与参考身份 $k$，定义
@@ -38,37 +45,63 @@ AnimalCLEF 2026 要求将四种野生动物的测试照片按个体划分，其�
 
 \section{实验设计}
 \subsection{数据与验证协议}
-数据来自 AnimalCLEF 2026 比赛页面\cite{competition}，包含 13074 张带标签训练图及 2409 张测试图。每个带标签物种的身份随机分为 75\% 参数校准池与 25\% 保留池。各池中约 60\% 至少有两张图片的身份被模拟为已知个体：其中一半图片作为参考，另一半作为查询。其他身份只作为查询，模拟新个体。仅在校准池搜索聚类阈值与关联阈值，再在身份不重合的保留池计算 ARI。实验采用 2026、2027、2028 三个随机种子，并记录查询图片数量。
+数据来自 AnimalCLEF 2026 比赛页面\cite{competition}，包含 13074 张带标签训练图及 2409 张测试图。猞猁、蝾螈、蠵龟分别有 $2957/946$、$1388/689$、$8729/500$ 张训练/测试图；德州角蜥只有 $274$ 张测试图。每个带标签物种的身份随机分为 75\% 参数校准池与 25\% 保留池。各池中约 60\% 至少有两张图片的身份被模拟为已知个体：一半图片作为参考，另一半作为查询。其他身份只作为查询，模拟新个体。只在校准池搜索 $\tau_c\in\{0.55,0.575,\ldots,0.95\}$ 与 $\tau_a\in\{0.65,0.70,\ldots,0.95\}$，在身份不重合的保留池计算 ARI。使用 2026、2027、2028 三个随机种子。
 
-德州角蜥缺乏带标签样本，初始聚类阈值取其他三个物种阈值的中位数。这是一项未经德州角蜥标签验证的迁移假设，不能把其他物种上的 ARI 当作它的性能估计。另报告前三个物种保留查询图片合并后的 ARI，但该指标不包含德州角蜥，不能视为官方比赛成绩。
+局部匹配探索性实验从 200 张蝾螈训练图像出发，各取融合特征前 10 个近邻，形成 1941 个不同候选对，其中 91 对同身份。这是偏向相似图像的候选分布，仅用于判断 SIFT 是否值得完整验证。德州角蜥缺乏带标签样本，初始聚类阈值取其他三个物种阈值的中位数 $0.725$，只产生 6 个大簇；SIFT 候选对中高匹配数稀疏，因此比较更保守的 $0.825$、$0.85$、$0.875$ 三个阈值。另报告前三个物种保留查询图片合并后的 ARI，但它不包含角蜥，不能视为官方成绩。
 
 \subsection{迭代准则}
-首先报告基线在各物种保留池的 ARI、簇数和运行时间。随后分别评估动物裁剪或分割、局部匹配重排、相似度融合，以及必要时的微调。每次只改变一个主要组件，并以保留池 ARI 和错误合并、错误拆分案例共同判断是否保留。公开获胜方案表明全局与局部相似度融合及图聚类具有潜力\cite{winner}，但本文将其作为待验证方向，而不直接采用其他队伍的比赛分数作为自身结果。
+分别评估特征模型、等权融合、局部匹配和图聚类，每次记录三种划分的保留集 ARI、错误合并及错误拆分。角蜥没有独立标签，阈值比较借助 Kaggle 分数，因此单独标出其排行榜适配风险。本文未运行动物分割或微调实验，也不将这些方法计入实验结果。
 
 \section{结果与讨论}
 \begin{table}[ht]
 \centering
-\caption{MegaDescriptor 基线在身份互斥保留集上的 ARI（三个随机种子的均值与样本标准差）。}
-\begin{tabular}{lc}
+\caption{三个身份互斥保留集的 ARI，均值 $\pm$ 样本标准差。末列不含角蜥。}
+\small
+\begin{tabular}{lcccc}
 \toprule
-物种或汇总 & 保留集 ARI \\
+方法 & 猞猁 & 蝾螈 & 蠵龟 & 合并 \\
 \midrule
-猞猁 & $0.251\pm0.165$ \\
-蝾螈 & $0.097\pm0.010$ \\
-蠵龟 & $0.496\pm0.156$ \\
-前三物种合并 & $0.422\pm0.139$ \\
+MegaDescriptor & $.251\pm.165$ & $.097\pm.010$ & $.496\pm.156$ & $.422\pm.139$ \\
+MiewID & $.264\pm.092$ & $.152\pm.018$ & $.775\pm.047$ & $.637\pm.058$ \\
+等权融合 & $.256\pm.137$ & $.162\pm.024$ & $.835\pm.050$ & $.648\pm.038$ \\
+融合 + 互近邻图 & $.278\pm.188$ & $.113\pm.037$ & $.742\pm.047$ & $.619\pm.038$ \\
+融合 + 蝾螈 SIFT & $.256\pm.137$ & $.222\pm.023$ & $.835\pm.050$ & $.648\pm.038$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-该基线提交到 Kaggle 后，public ARI 为 $0.13528$，private ARI 为 $0.18564$。保留集与隐藏测试集的得分差异说明本地划分不能完全重现比赛分布。三个种子的误差统计显示，蝾螈与蠵龟主要受到同一只动物被拆分为多个簇的影响；猞猁的错误合并和错误拆分都较明显。MiewID 对照实验及后续改进尚在运行，当前表格不代表最终方法。
+蝾螈候选对的全局特征 AUC 为 $0.735$，SIFT 匹配数 AUC 为 $0.885$，与完整保留集的改进方向一致。融合显著改善蠵龟，但猞猁三个划分的波动很大。图聚类给猞猁带来小幅均值收益，却降低蝾螈、蠵龟的结果。
+
+\begin{table}[ht]
+\centering
+\caption{Kaggle 提交 ARI。private 为比赛隐藏划分评分，不是本地保留集。}
+\small
+\begin{tabular}{lccc}
+\toprule
+提交方法 & 角蜥阈值 & public & private \\
+\midrule
+MegaDescriptor & $.800$ & $.13528$ & $.18564$ \\
+MiewID & $.800$ & $.19256$ & $.25711$ \\
+等权融合 & $.725$ & $.21143$ & $.26174$ \\
+融合 + 蝾螈 SIFT & $.725$ & $.22721$ & $.27104$ \\
+角蜥阈值 $.85$，无角蜥 SIFT & $.850$ & $.26093$ & $.34872$ \\
+再加角蜥 SIFT & $.825$ & $.29224$ & $.36086$ \\
+再加角蜥 SIFT（最终） & $.850$ & $\mathbf{.30642}$ & $\mathbf{.39072}$ \\
+再加角蜥 SIFT & $.875$ & $.29795$ & $.39003$ \\
+再加猞猁图聚类 & $.850$ & $.31320$ & $.37797$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+角蜥在最终阈值 $.85$ 下被划为 $214$ 个测试簇，原迁移阈值只产生 $6$ 簇。单独提高阈值而不加入角蜥 SIFT，private ARI 已从 $.27104$ 升到 $.34872$；再加入局部匹配，升至 $.39072$。$0.85$ 与 $0.875$ 的 private 分数接近，$0.825$ 则较低。猞猁改用图聚类虽将 public ARI 提到 $.31320$，private ARI 降至 $.37797$，所以最终保留平均连接聚类。这些比较也说明不应把公开榜单的单次提升当作稳健泛化证据。
 
 \section{可复现性与限制}
-代码、依赖、随机种子、阈值及实验记录保存在公开仓库\url{https://github.com/Fangwenky/animalclef-2026-reid}。比赛图像和标签不会上传。验证集通过已标注训练数据构造，其个体比例及拍摄分布未必等同隐藏测试集；特别是德州角蜥没有直接的本地标签验证。实际 Kaggle 成绩与本地保留池 ARI 分开报告。预训练模型可能包含与本比赛相近的动物图像，模型预训练数据的潜在重叠也属于解释结果时的限制。
+代码、依赖、随机种子、阈值及实验记录保存在\href{https://github.com/Fangwenky/animalclef-2026-reid}{公开仓库}。比赛图像和标签不上传。验证集通过已标注训练数据构造，其个体比例及拍摄分布未必等同隐藏测试集；角蜥没有直接的本地标签验证，阈值又借助 Kaggle 分数选择，存在排行榜适配。实际 Kaggle 成绩与本地保留集 ARI 分开报告。预训练模型数据与比赛图像是否存在重叠未被独立排查。最终 private ARI $.39072$ 仍明显低于理想划分；后续应优先尝试动物裁剪、局部几何一致性和只用训练数据完成的物种化验证。
 
 \begin{thebibliography}{9}
 \bibitem{competition} Adam, L. et al. AnimalCLEF26 @ CVPR \& CLEF. Kaggle, 2026. \href{https://www.kaggle.com/competitions/animal-clef-2026}{比赛页面}.
-\bibitem{wildlifedatasets} \v{C}erm\'ak, V. et al. WildlifeDatasets: An Open-Source Toolkit for Animal Re-Identification. WACV, 2024. \href{https://openaccess.thecvf.com/content/WACV2024/papers/Cermak_WildlifeDatasets_An_Open-Source_Toolkit_for_Animal_Re-Identification_WACV_2024_paper.pdf}{论文}.
-\bibitem{winner} ElBassat, M. et al. Calibrated Similarity and Graph Clustering for Open-Set Animal Re-Identification. arXiv:2608.02469, 2026. \href{https://arxiv.org/abs/2608.02469}{论文}.
+\bibitem{mega} \v{C}erm\'ak, V. et al. MegaDescriptor-T-224 model card. Hugging Face. \url{https://huggingface.co/BVRA/MegaDescriptor-T-224}.
+\bibitem{miewid} Conservation X Labs. MiewID-msv3 model card. Hugging Face. \url{https://huggingface.co/conservationxlabs/miewid-msv3}.
+\bibitem{sift} Lowe, D. G. Distinctive image features from scale-invariant keypoints. International Journal of Computer Vision, 60, 91--110, 2004.
 \end{thebibliography}
 \end{document}

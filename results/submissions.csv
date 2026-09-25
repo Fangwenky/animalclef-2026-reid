@@ -1,2 +1,10 @@
 submission_id,method,config,public_ari,private_ari
-56527489,MegaDescriptor average-linkage baseline,baseline_seed2026.json,0.13528,0.18564
+56527489,MegaDescriptor average linkage,baseline_seed2026.json,0.13528,0.18564
+56527750,MiewID average linkage,miewid_seed2026.json,0.19256,0.25711
+56527804,Equal weight feature fusion,fusion05_seed2026.json,0.21143,0.26174
+56528108,Fusion plus salamander SIFT,fusion05_sift30_seed2026.json,0.22721,0.27104
+56539262,THL threshold 0.850 without THL SIFT,fusion05_sift_thl085_no_local.json,0.26093,0.34872
+56528150,Fusion and SIFT with lizard threshold 0.825,fusion05_sift_thl825.json,0.29224,0.36086
+56528126,Fusion and SIFT with lizard threshold 0.850,fusion05_sift_thl085.json,0.30642,0.39072
+56528155,Fusion and SIFT with lizard threshold 0.875,fusion05_sift_thl875.json,0.29795,0.39003
+56528182,Hybrid lynx graph and SIFT,fusion05_sift_thl085_lynxgraph.json,0.31320,0.37797

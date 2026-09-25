@@ -1,0 +1,52 @@
+{
+  "seed": 2027,
+  "model": "conservationxlabs/miewid-msv3",
+  "species": {
+    "LynxID2025": {
+      "cluster_threshold": 0.75,
+      "attach_threshold": 0.7,
+      "calibration_ari": 0.3093538980058573,
+      "holdout_ari": 0.17946534508384243,
+      "calibration_queries": 1560,
+      "holdout_queries": 423,
+      "false_merge_pairs": 579,
+      "false_split_pairs": 7865,
+      "holdout_predicted_clusters": 162,
+      "known_attach_accuracy": 0.55625,
+      "novel_false_attach_rate": 0.1596958174904943
+    },
+    "SalamanderID2025": {
+      "cluster_threshold": 0.875,
+      "attach_threshold": 0.8,
+      "calibration_ari": 0.12239689293824245,
+      "holdout_ari": 0.16988362044430186,
+      "calibration_queries": 815,
+      "holdout_queries": 293,
+      "false_merge_pairs": 66,
+      "false_split_pairs": 354,
+      "holdout_predicted_clusters": 241,
+      "known_attach_accuracy": 0.34065934065934067,
+      "novel_false_attach_rate": 0.04455445544554455
+    },
+    "SeaTurtleID2022": {
+      "cluster_threshold": 0.8,
+      "attach_threshold": 0.9,
+      "calibration_ari": 0.8309251440829445,
+      "holdout_ari": 0.8099642341525091,
+      "calibration_queries": 4724,
+      "holdout_queries": 1560,
+      "false_merge_pairs": 0,
+      "false_split_pairs": 7165,
+      "holdout_predicted_clusters": 443,
+      "known_attach_accuracy": 0.5336463223787168,
+      "novel_false_attach_rate": 0.0
+    },
+    "TexasHornedLizards": {
+      "cluster_threshold": 0.8,
+      "attach_threshold": null,
+      "holdout_ari": null,
+      "note": "Transferred threshold; no species-specific labelled validation"
+    }
+  },
+  "pooled_holdout_ari_three_species": 0.6728060305687057
+}

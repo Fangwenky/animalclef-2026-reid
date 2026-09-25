@@ -1,0 +1,56 @@
+{
+  "seed": 2026,
+  "model": "fusion-mega-0.50",
+  "cluster_method": "average",
+  "graph_k": null,
+  "local_alpha": 0.12,
+  "species": {
+    "LynxID2025": {
+      "cluster_threshold": 0.675,
+      "attach_threshold": 0.8,
+      "calibration_ari": 0.18583386495359605,
+      "holdout_ari": 0.41077458239373343,
+      "calibration_queries": 1549,
+      "holdout_queries": 586,
+      "false_merge_pairs": 25310,
+      "false_split_pairs": 5974,
+      "holdout_predicted_clusters": 30,
+      "known_attach_accuracy": 0.014705882352941176,
+      "novel_false_attach_rate": 0.009554140127388535
+    },
+    "SalamanderID2025": {
+      "cluster_threshold": 0.875,
+      "attach_threshold": 0.85,
+      "calibration_ari": 0.27100168538184305,
+      "holdout_ari": 0.21160130132214905,
+      "calibration_queries": 834,
+      "holdout_queries": 259,
+      "false_merge_pairs": 4,
+      "false_split_pairs": 203,
+      "holdout_predicted_clusters": 233,
+      "known_attach_accuracy": 0.18518518518518517,
+      "novel_false_attach_rate": 0.016853932584269662
+    },
+    "SeaTurtleID2022": {
+      "cluster_threshold": 0.725,
+      "attach_threshold": 0.85,
+      "calibration_ari": 0.8287843631929506,
+      "holdout_ari": 0.8866547073164367,
+      "calibration_queries": 4608,
+      "holdout_queries": 1516,
+      "false_merge_pairs": 160,
+      "false_split_pairs": 4431,
+      "holdout_predicted_clusters": 252,
+      "known_attach_accuracy": 0.6828571428571428,
+      "novel_false_attach_rate": 0.0012254901960784314
+    },
+    "TexasHornedLizards": {
+      "cluster_threshold": 0.875,
+      "attach_threshold": null,
+      "holdout_ari": null,
+      "note": "Unsupervised candidate threshold; compared on Kaggle leaderboard; no THL labels available"
+    }
+  },
+  "pooled_holdout_ari_three_species": 0.65127068425202,
+  "submission_variant": "Salamander and THL SIFT caches; THL threshold 0.875"
+}
